@@ -623,7 +623,7 @@ def changedetection_app(config=None, datastore_o=None):
 
         if request.method == 'POST' and form.validate():
             datastore.data['settings']['application']['notification_urls'] = form.notification_urls.data
-            datastore.data['settings']['requests']['seconds_between_check'] = form.seconds_between_check.data
+            datastore.data['settings']['requests']['seconds_between_check'] = int(form.seconds_between_check.data)
             datastore.data['settings']['application']['extract_title_as_title'] = form.extract_title_as_title.data
             datastore.data['settings']['application']['fetch_backend'] = form.fetch_backend.data
             datastore.data['settings']['application']['notification_title'] = form.notification_title.data

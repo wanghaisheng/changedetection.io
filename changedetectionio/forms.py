@@ -351,7 +351,7 @@ class watchForm(commonSettingsForm):
 class globalSettingsForm(commonSettingsForm):
 
     password = SaltyPasswordField()
-    seconds_between_check = HiddenField(validators=[validators.Optional(), validators.NumberRange(min=1)])
+    seconds_between_check = HiddenField(validators=[validators.Optional()])
     extract_title_as_title = BooleanField('Extract <title> from document and use as watch title')
     base_url = StringField('Base URL', validators=[validators.Optional()])
     global_subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
