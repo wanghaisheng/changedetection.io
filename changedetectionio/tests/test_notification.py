@@ -143,7 +143,7 @@ def test_check_notification(client, live_server):
         url_for("settings_page"),
         data={"notification_title": "New ChangeDetection.io Notification - {watch_url}",
               "notification_urls": "json://foobar.com", #Re #143 should not see that it sent without [test checkbox]
-              "minutes_between_check": 180,
+              "seconds_between_check": 180,
               "fetch_backend": "html_requests",
               },
         follow_redirects=True
@@ -201,7 +201,7 @@ def test_check_notification(client, live_server):
               "notification_body": "Rubbish: {rubbish}\n",
               "notification_format": "Text",
               "notification_urls": "json://foobar.com",
-              "minutes_between_check": 180,
+              "seconds_between_check": 180,
               "fetch_backend": "html_requests"
               },
         follow_redirects=True

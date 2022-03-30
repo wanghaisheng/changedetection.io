@@ -315,7 +315,7 @@ class watchForm(commonSettingsForm):
     url = html5.URLField('URL', validators=[validateURL()])
     tag = StringField('Group tag', [validators.Optional(), validators.Length(max=35)])
 
-    minutes_between_check = html5.IntegerField('Maximum time in minutes until recheck',
+    seconds_between_check = html5.IntegerField('Maximum time in minutes until recheck',
                                                [validators.Optional(), validators.NumberRange(min=1)])
     css_filter = StringField('CSS/JSON/XPATH Filter', [ValidateCSSJSONXPATHInput()])
     subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
@@ -347,7 +347,7 @@ class watchForm(commonSettingsForm):
 class globalSettingsForm(commonSettingsForm):
 
     password = SaltyPasswordField()
-    minutes_between_check = html5.IntegerField('Maximum time in minutes until recheck',
+    seconds_between_check = html5.IntegerField('Maximum time in minutes until recheck',
                                                [validators.NumberRange(min=1)])
     extract_title_as_title = BooleanField('Extract <title> from document and use as watch title')
     base_url = StringField('Base URL', validators=[validators.Optional()])

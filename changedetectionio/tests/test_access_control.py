@@ -13,7 +13,7 @@ def test_check_access_control(app, client):
         res = c.post(
             url_for("settings_page"),
             data={"password": "foobar",
-                  "minutes_between_check": 180,
+                  "seconds_between_check": 180,
                   'fetch_backend': "html_requests"},
             follow_redirects=True
         )
@@ -46,13 +46,13 @@ def test_check_access_control(app, client):
         assert b"BACKUP" in res.data
         assert b"IMPORT" in res.data
         assert b"LOG OUT" in res.data
-        assert b"minutes_between_check" in res.data
+        assert b"seconds_between_check" in res.data
         assert b"fetch_backend" in res.data
 
         res = c.post(
             url_for("settings_page"),
             data={
-                "minutes_between_check": 180,
+                "seconds_between_check": 180,
                 "tag": "",
                 "headers": "",
                 "fetch_backend": "html_webdriver",
@@ -74,7 +74,7 @@ def test_check_access_control_no_blank_password(app, client):
         res = c.post(
             url_for("settings_page"),
             data={"password": "",
-                  "minutes_between_check": 180,
+                  "seconds_between_check": 180,
                   'fetch_backend': "html_requests"},
             follow_redirects=True
         )
@@ -96,7 +96,7 @@ def test_check_access_no_remote_access_to_remove_password(app, client):
         res = c.post(
             url_for("settings_page"),
             data={"password": "password",
-                  "minutes_between_check": 180,
+                  "seconds_between_check": 180,
                   'fetch_backend': "html_requests"},
             follow_redirects=True
         )
@@ -107,7 +107,7 @@ def test_check_access_no_remote_access_to_remove_password(app, client):
         res = c.post(
             url_for("settings_page"),
             data={
-                "minutes_between_check": 180,
+                "seconds_between_check": 180,
                 "tag": "",
                 "headers": "",
                 "fetch_backend": "html_webdriver",

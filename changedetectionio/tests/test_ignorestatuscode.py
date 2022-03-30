@@ -51,7 +51,7 @@ def test_normal_page_check_works_with_ignore_status_code(client, live_server):
     res = client.post(
         url_for("settings_page"),
         data={
-            "minutes_between_check": 180,
+            "seconds_between_check": 180,
             "ignore_status_codes": "y",
             'fetch_backend': "html_requests"
         },

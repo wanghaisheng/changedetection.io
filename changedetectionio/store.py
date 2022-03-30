@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid as uuid_builder
@@ -41,7 +42,7 @@ class ChangeDetectionStore:
                 },
                 'requests': {
                     'timeout': 15,  # Default 15 seconds
-                    'minutes_between_check': 3 * 60,  # Default 3 hours
+                    'seconds_between_check': 60 * 60 * 3,  # Default 3 hours
                     'workers': 10  # Number of threads, lower is better for slow connections
                 },
                 'application': {
@@ -57,6 +58,7 @@ class ChangeDetectionStore:
                     'notification_title': default_notification_title,
                     'notification_body': default_notification_body,
                     'notification_format': default_notification_format,
+                    'schema_version' : 0
                 }
             }
         }
@@ -73,7 +75,7 @@ class ChangeDetectionStore:
             'title': None,
             # Re #110, so then if this is set to None, we know to use the default value instead
             # Requires setting to None on submit if it's the same as the default
-            'minutes_between_check': None,
+            'seconds_between_check': None,
             'previous_md5': "",
             'uuid': str(uuid_builder.uuid4()),
             'headers': {},  # Extra headers to send
@@ -162,6 +164,9 @@ class ChangeDetectionStore:
             import secrets
             secret = secrets.token_hex(16)
             self.__data['settings']['application']['rss_access_token'] = secret
+
+        # Bump the update version by running updates
+        self.run_updates()
 
         self.needs_write = True
 
@@ -442,3 +447,40 @@ class ChangeDetectionStore:
             if not str(item) in index:
                 print ("Removing",item)
                 unlink(item)
+
+    def run_updates(self):
+        import inspect
+        updates_available = []
+        for i, o in inspect.getmembers(self, predicate=inspect.ismethod):
+            m = re.search(r'update_(\d+)$', i)
+            if m:
+                updates_available.append(int(m.group(1)))
+        updates_available.sort()
+
+        for update_n in updates_available:
+            if update_n > self.__data['settings']['application']['schema_version']:
+                print ("Trying update_{}".format((update_n)))
+                try:
+                    update_method = getattr(self, "update_{}".format(update_n))
+                    result = update_method()
+                except Exception as e:
+                    print("Error while trying update_{}".format((update_n)))
+                    print(e)
+                    # Don't run any more updates
+                    return
+                else:
+                    # Bump the version
+                    self.__data['settings']['application']['schema_version'] = update_n
+
+    # Convert minutes to seconds on settings and each watch
+    def update_1(self):
+        if 'minutes_between_check' in self.data['settings']['requests']:
+            self.data['settings']['requests']['seconds_between_check'] = self.data['settings']['requests']['minutes_between_check'] * 60
+            del(self.data['settings']['requests']['minutes_between_check'])
+
+        for uuid, watch in self.data['watching'].items():
+            if 'minutes_between_check' in watch:
+                if watch['minutes_between_check'] is not None:
+                    watch['seconds_between_check'] = watch['minutes_between_check'] * 60
+                del (watch['minutes_between_check'])
+

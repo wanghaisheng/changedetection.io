@@ -494,14 +494,14 @@ def changedetection_app(config=None, datastore_o=None):
         if request.method == 'POST' and form.validate():
 
             # Re #110, if they submit the same as the default value, set it to None, so we continue to follow the default
-            if form.minutes_between_check.data == datastore.data['settings']['requests']['minutes_between_check']:
-                form.minutes_between_check.data = None
+            if form.seconds_between_check.data == datastore.data['settings']['requests']['seconds_between_check']:
+                form.seconds_between_check.data = None
 
             if form.fetch_backend.data == datastore.data['settings']['application']['fetch_backend']:
                 form.fetch_backend.data = None
 
             update_obj = {'url': form.url.data.strip(),
-                          'minutes_between_check': form.minutes_between_check.data,
+                          'seconds_between_check': form.seconds_between_check.data,
                           'tag': form.tag.data.strip(),
                           'title': form.title.data.strip(),
                           'headers': form.headers.data,
@@ -578,8 +578,8 @@ def changedetection_app(config=None, datastore_o=None):
 
             # Re #110 offer the default minutes
             using_default_minutes = False
-            if form.minutes_between_check.data == None:
-                form.minutes_between_check.data = datastore.data['settings']['requests']['minutes_between_check']
+            if form.seconds_between_check.data == None:
+                form.seconds_between_check.data = datastore.data['settings']['requests']['seconds_between_check']
                 using_default_minutes = True
 
             output = render_template("edit.html",
@@ -601,7 +601,7 @@ def changedetection_app(config=None, datastore_o=None):
         form = forms.globalSettingsForm(request.form)
 
         if request.method == 'GET':
-            form.minutes_between_check.data = int(datastore.data['settings']['requests']['minutes_between_check'])
+            form.seconds_between_check.data = int(datastore.data['settings']['requests']['seconds_between_check'])
             form.notification_urls.data = datastore.data['settings']['application']['notification_urls']
             form.global_subtractive_selectors.data = datastore.data['settings']['application']['global_subtractive_selectors']
             form.global_ignore_text.data = datastore.data['settings']['application']['global_ignore_text']
@@ -623,7 +623,7 @@ def changedetection_app(config=None, datastore_o=None):
 
         if request.method == 'POST' and form.validate():
             datastore.data['settings']['application']['notification_urls'] = form.notification_urls.data
-            datastore.data['settings']['requests']['minutes_between_check'] = form.minutes_between_check.data
+            datastore.data['settings']['requests']['seconds_between_check'] = form.seconds_between_check.data
             datastore.data['settings']['application']['extract_title_as_title'] = form.extract_title_as_title.data
             datastore.data['settings']['application']['fetch_backend'] = form.fetch_backend.data
             datastore.data['settings']['application']['notification_title'] = form.notification_title.data
@@ -1151,7 +1151,7 @@ def ticker_thread_check_time_launch_checks():
 
         # Check for watches outside of the time threshold to put in the thread queue.
         now = time.time()
-        max_system_wide = int(copied_datastore.data['settings']['requests']['minutes_between_check']) * 60
+        max_system_wide = int(copied_datastore.data['settings']['requests']['seconds_between_check'])
 
         for uuid, watch in copied_datastore.data['watching'].items():
 
@@ -1160,10 +1160,10 @@ def ticker_thread_check_time_launch_checks():
                 continue
 
             # If they supplied an individual entry minutes to threshold.
-            watch_minutes_between_check = watch.get('minutes_between_check', None)
-            if watch_minutes_between_check is not None:
+            watch_seconds_between_check = watch.get('seconds_between_check', None)
+            if watch_seconds_between_check is not None:
                 # Cast to int just incase
-                max_time = int(watch_minutes_between_check) * 60
+                max_time = int(watch_seconds_between_check)
             else:
                 # Default system wide.
                 max_time = max_system_wide
