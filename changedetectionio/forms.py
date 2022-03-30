@@ -5,6 +5,7 @@ from wtforms import (
     Field,
     Form,
     IntegerField,
+    HiddenField,
     PasswordField,
     RadioField,
     SelectField,
@@ -303,16 +304,6 @@ class quickWatchForm(Form):
     tag = StringField('Group tag', [validators.Optional(), validators.Length(max=35)])
 
 
-class DaysMinutesHoursSecondsWidget(Form):
-    seconds = html5.IntegerField('Maximum time in seconds until recheck',
-                                 [validators.Optional(), validators.NumberRange(min=1)])
-    minutes = html5.IntegerField('Maximum time in minutes until recheck',
-                                 [validators.Optional(), validators.NumberRange(min=1)])
-    hours = html5.IntegerField('Maximum time in hours until recheck',
-                               [validators.Optional(), validators.NumberRange(min=1)])
-    days = html5.IntegerField('Maximum time in days until recheck',
-                              [validators.Optional(), validators.NumberRange(min=1)])
-
 class commonSettingsForm(Form):
 
     notification_urls = StringListField('Notification URL List', validators=[validators.Optional(), ValidateNotificationBodyAndTitleWhenURLisSet(), ValidateAppRiseServers()])
@@ -328,8 +319,7 @@ class watchForm(commonSettingsForm):
     url = html5.URLField('URL', validators=[validateURL()])
     tag = StringField('Group tag', [validators.Optional(), validators.Length(max=35)])
 
-    time_between_check = html5.IntegerField('Maximum time until recheck',
-                                               [validators.Optional(), validators.NumberRange(min=1)])
+    seconds_between_check = HiddenField(validators=[validators.Optional(), validators.NumberRange(min=1)])
 
     css_filter = StringField('CSS/JSON/XPATH Filter', [ValidateCSSJSONXPATHInput()])
     subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
@@ -361,7 +351,7 @@ class watchForm(commonSettingsForm):
 class globalSettingsForm(commonSettingsForm):
 
     password = SaltyPasswordField()
-    time_between_check =  FormField(DaysMinutesHoursSecondsWidget)
+    seconds_between_check = HiddenField(validators=[validators.Optional(), validators.NumberRange(min=1)])
     extract_title_as_title = BooleanField('Extract <title> from document and use as watch title')
     base_url = StringField('Base URL', validators=[validators.Optional()])
     global_subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
