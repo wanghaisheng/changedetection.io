@@ -319,7 +319,7 @@ class watchForm(commonSettingsForm):
     url = html5.URLField('URL', validators=[validateURL()])
     tag = StringField('Group tag', [validators.Optional(), validators.Length(max=35)])
 
-    seconds_between_check = HiddenField(validators=[validators.Optional(), validators.NumberRange(min=1)])
+    seconds_between_check = HiddenField(validators=[validators.Optional()])
 
     css_filter = StringField('CSS/JSON/XPATH Filter', [ValidateCSSJSONXPATHInput()])
     subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
