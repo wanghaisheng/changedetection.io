@@ -319,6 +319,7 @@ class watchForm(commonSettingsForm):
     url = html5.URLField('URL', validators=[validateURL()])
     tag = StringField('Group tag', [validators.Optional(), validators.Length(max=35)])
 
+    # I think ou can override how the form is submitted so its always int and we can use the min=getenv validator
     seconds_between_check = HiddenField(validators=[validators.Optional()])
 
     css_filter = StringField('CSS/JSON/XPATH Filter', [ValidateCSSJSONXPATHInput()])
