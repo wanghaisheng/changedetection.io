@@ -3,7 +3,10 @@
 {% from '_helpers.jinja' import render_field %}
 {% from '_helpers.jinja' import render_button %}
 {% from '_common_fields.jinja' import render_common_settings_form %}
+<script type="text/javascript" src="{{url_for('static_content', group='js', filename='time-widget.js')}}"></script>
+<link rel="stylesheet" href="{{url_for('static_content', group='styles', filename='time-widget.css')}}">
 <script type="text/javascript" src="{{url_for('static_content', group='js', filename='tabs.js')}}" defer></script>
+<script type="text/javascript" src="{{url_for('static_content', group='js', filename='edit.js')}}" defer></script>
 
 <div class="edit-form monospaced-textarea">
 

@@ -448,6 +448,10 @@ class ChangeDetectionStore:
                 print ("Removing",item)
                 unlink(item)
 
+    # Run all updates
+    # IMPORTANT - Each update could be run even when they have a new install and the schema is correct
+    #             So therefor - each `update_n` should be very careful about checking if it needs to actually run
+    #             Probably we should bump the current update schema version with each tag release version?
     def run_updates(self):
         import inspect
         updates_available = []
@@ -461,15 +465,14 @@ class ChangeDetectionStore:
             if update_n > self.__data['settings']['application']['schema_version']:
                 print ("Trying update_{}".format((update_n)))
                 try:
-                    update_method = getattr(self, "update_{}".format(update_n))
-                    result = update_method()
+                    update_method = getattr(self, "update_{}".format(update_n))()
                 except Exception as e:
                     print("Error while trying update_{}".format((update_n)))
                     print(e)
                     # Don't run any more updates
                     return
                 else:
-                    # Bump the version
+                    # Bump the version, important
                     self.__data['settings']['application']['schema_version'] = update_n
 
     # Convert minutes to seconds on settings and each watch

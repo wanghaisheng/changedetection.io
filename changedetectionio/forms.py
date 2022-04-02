@@ -320,7 +320,7 @@ class watchForm(commonSettingsForm):
     tag = StringField('Group tag', [validators.Optional(), validators.Length(max=35)])
 
     # I think ou can override how the form is submitted so its always int and we can use the min=getenv validator
-    seconds_between_check = HiddenField(validators=[validators.Optional()])
+    seconds_between_check = StringField('Time between check', validators=[validators.Optional()])
 
     css_filter = StringField('CSS/JSON/XPATH Filter', [ValidateCSSJSONXPATHInput()])
     subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
@@ -352,7 +352,7 @@ class watchForm(commonSettingsForm):
 class globalSettingsForm(commonSettingsForm):
 
     password = SaltyPasswordField()
-    seconds_between_check = HiddenField(validators=[validators.Optional()])
+    seconds_between_check = StringField('Time between check', validators=[validators.Optional()])
     extract_title_as_title = BooleanField('Extract <title> from document and use as watch title')
     base_url = StringField('Base URL', validators=[validators.Optional()])
     global_subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
