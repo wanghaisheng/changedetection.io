@@ -36,6 +36,7 @@ from flask import (
 )
 from flask_login import login_required
 from flask_wtf import CSRFProtect
+from werkzeug.datastructures import MultiDict
 
 from changedetectionio import html_tools
 
@@ -76,6 +77,13 @@ csrf = CSRFProtect()
 csrf.init_app(app)
 
 notification_debug_log=[]
+
+# https://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute
+# because watch is a dict
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 def init_app_secret(datastore_path):
     secret = ""
@@ -485,21 +493,24 @@ def changedetection_app(config=None, datastore_o=None):
 
     @app.route("/edit/<string:uuid>", methods=['GET', 'POST'])
     @login_required
+    # https://stackoverflow.com/questions/42984453/wtforms-populate-form-with-data-if-data-exists
+    # https://wtforms.readthedocs.io/en/3.0.x/forms/#wtforms.form.Form.populate_obj ?
+
     def edit_page(uuid):
         from changedetectionio import forms
-        form = forms.watchForm(request.form)
+
+        o= AttrDict(datastore.data['watching'][uuid])
+        form = forms.watchForm(request.form, obj=o)
 
         # More for testing, possible to return the first/only
         if uuid == 'first':
             uuid = list(datastore.data['watching'].keys()).pop()
-
 
         if request.method == 'GET':
             if not uuid in datastore.data['watching']:
                 flash("No watch with the UUID %s found." % (uuid), "error")
                 return redirect(url_for('index'))
 
-            populate_form_from_watch(form, datastore.data['watching'][uuid])
 
             if datastore.data['watching'][uuid]['fetch_backend'] is None:
                 form.fetch_backend.data = datastore.data['settings']['application']['fetch_backend']
@@ -507,27 +518,13 @@ def changedetection_app(config=None, datastore_o=None):
         if request.method == 'POST' and form.validate():
 
             # Re #110, if they submit the same as the default value, set it to None, so we continue to follow the default
-            if form.seconds_between_check.data == datastore.data['settings']['requests']['seconds_between_check']:
-                form.seconds_between_check.data = None
+#            if form.seconds_between_check.data == datastore.data['settings']['requests']['seconds_between_check']:
+#                form.seconds_between_check.data = None
 
             if form.fetch_backend.data == datastore.data['settings']['application']['fetch_backend']:
                 form.fetch_backend.data = None
 
-            update_obj = {'url': form.url.data.strip(),
-                          'seconds_between_check': form.seconds_between_check.data,
-                          'tag': form.tag.data.strip(),
-                          'title': form.title.data.strip(),
-                          'headers': form.headers.data,
-                          'body': form.body.data,
-                          'method': form.method.data,
-                          'ignore_status_codes': form.ignore_status_codes.data,
-                          'fetch_backend': form.fetch_backend.data,
-                          'trigger_text': form.trigger_text.data,
-                          'notification_title': form.notification_title.data,
-                          'notification_body': form.notification_body.data,
-                          'notification_format': form.notification_format.data,
-                          'extract_title_as_title': form.extract_title_as_title.data,
-                          }
+            extra_update_obj = {}
 
             # Notification URLs
             datastore.data['watching'][uuid]['notification_urls'] = form.notification_urls.data
@@ -539,18 +536,15 @@ def changedetection_app(config=None, datastore_o=None):
             # Reset the previous_md5 so we process a new snapshot including stripping ignore text.
             if form_ignore_text:
                 if len(datastore.data['watching'][uuid]['history']):
-                    update_obj['previous_md5'] = get_current_checksum_include_ignore_text(uuid=uuid)
-
-
-            datastore.data['watching'][uuid]['css_filter'] = form.css_filter.data.strip()
-            datastore.data['watching'][uuid]['subtractive_selectors'] = form.subtractive_selectors.data
+                    extra_update_obj['previous_md5'] = get_current_checksum_include_ignore_text(uuid=uuid)
 
             # Reset the previous_md5 so we process a new snapshot including stripping ignore text.
             if form.css_filter.data.strip() != datastore.data['watching'][uuid]['css_filter']:
                 if len(datastore.data['watching'][uuid]['history']):
-                    update_obj['previous_md5'] = get_current_checksum_include_ignore_text(uuid=uuid)
+                    extra_update_obj['previous_md5'] = get_current_checksum_include_ignore_text(uuid=uuid)
 
-            datastore.data['watching'][uuid].update(update_obj)
+            datastore.data['watching'][uuid].update(form.data)
+            datastore.data['watching'][uuid].update(extra_update_obj)
 
             flash("Updated watch.")
 
@@ -591,9 +585,9 @@ def changedetection_app(config=None, datastore_o=None):
 
             # Re #110 offer the default minutes
             using_default_minutes = False
-            if form.seconds_between_check.data == None:
-                form.seconds_between_check.data = datastore.data['settings']['requests']['seconds_between_check']
-                using_default_minutes = True
+#            if form.seconds_between_check.data == None:
+#                form.seconds_between_check.data = datastore.data['settings']['requests']['seconds_between_check']
+#                using_default_minutes = True
 
             output = render_template("edit.html",
                                      uuid=uuid,
@@ -1194,7 +1188,7 @@ def ticker_thread_check_time_launch_checks():
 
         # Check for watches outside of the time threshold to put in the thread queue.
         now = time.time()
-        max_system_wide = int(copied_datastore.data['settings']['requests']['seconds_between_check'])
+        max_system_wide = int(copied_datastore.data.total_seconds)
 
         for uuid, watch in copied_datastore.data['watching'].items():
 
@@ -1203,10 +1197,9 @@ def ticker_thread_check_time_launch_checks():
                 continue
 
             # If they supplied an individual entry minutes to threshold.
-            watch_seconds_between_check = watch.get('seconds_between_check', None)
-            if watch_seconds_between_check is not None:
-                # Cast to int just incase
-                max_time = int(watch_seconds_between_check)
+            watch_seconds_between_check = watch.total_seconds
+            if watch_seconds_between_check:
+                max_time = watch_seconds_between_check
             else:
                 # Default system wide.
                 max_time = max_system_wide

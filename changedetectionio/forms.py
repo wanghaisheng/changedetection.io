@@ -29,6 +29,8 @@ from changedetectionio.notification import (
     valid_notification_formats,
 )
 
+from changedetectionio.store import minimum_seconds_recheck_time
+
 valid_method = {
     'GET',
     'POST',
@@ -224,7 +226,8 @@ class ValidateListRegex(object):
         self.message = message
 
     def __call__(self, form, field):
-
+        if not field.data:
+            return
         for line in field.data:
             if line[0] == '/' and line[-1] == '/':
                 # Because internally we dont wrap in /
@@ -252,6 +255,9 @@ class ValidateCSSJSONXPATHInput(object):
             data = [field.data]
         else:
             data = field.data
+
+        if not data:
+            return
 
         for line in data:
         # Nothing to see here
@@ -296,7 +302,16 @@ class ValidateCSSJSONXPATHInput(object):
                 # Re #265 - maybe in the future fetch the page and offer a
                 # warning/notice that its possible the rule doesnt yet match anything?
 
-            
+
+class TimeBetweenCheckForm(Form):
+    weeks = IntegerField('Weeks', validators=[validators.Optional()])
+    days = IntegerField('Days', validators=[validators.Optional()])
+    hours = IntegerField('Hours', validators=[validators.Optional()])
+    minutes = IntegerField('Minutes', validators=[validators.Optional()])
+    seconds = IntegerField('Seconds', validators=[validators.Optional()])
+    # @todo add total seconds minimum validatior = minimum_seconds_recheck_time
+
+
 class quickWatchForm(Form):
     # https://wtforms.readthedocs.io/en/2.3.x/fields/#module-wtforms.fields.html5
     # `require_tld` = False is needed even for the test harness "http://localhost:5005.." to run
@@ -318,9 +333,7 @@ class watchForm(commonSettingsForm):
 
     url = html5.URLField('URL', validators=[validateURL()])
     tag = StringField('Group tag', [validators.Optional(), validators.Length(max=35)])
-
-    # I think ou can override how the form is submitted so its always int and we can use the min=getenv validator
-    seconds_between_check = StringField('Time between check', validators=[validators.Optional()])
+    time_between_check = FormField(TimeBetweenCheckForm)
 
     css_filter = StringField('CSS/JSON/XPATH Filter', [ValidateCSSJSONXPATHInput()])
     subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
@@ -336,6 +349,7 @@ class watchForm(commonSettingsForm):
     save_button = SubmitField('Save', render_kw={"class": "pure-button pure-button-primary"})
     save_and_preview_button = SubmitField('Save & Preview', render_kw={"class": "pure-button pure-button-primary"})
 
+    #@todo add process_form(?) to strip all
     def validate(self, **kwargs):
         if not super().validate():
             return False
@@ -351,7 +365,7 @@ class watchForm(commonSettingsForm):
 
 class globalSettingsForm(commonSettingsForm):
     password = SaltyPasswordField()
-    seconds_between_check = StringField('Time between check', validators=[validators.Optional()])
+    time_between_check = FormField(TimeBetweenCheckForm)
     extract_title_as_title = BooleanField('Extract <title> from document and use as watch title')
     base_url = StringField('Base URL', validators=[validators.Optional()])
     global_subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])

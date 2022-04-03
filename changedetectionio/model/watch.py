@@ -1,0 +1,58 @@
+import os
+
+import uuid as uuid_builder
+
+minimum_seconds_recheck_time = int(os.getenv('MINIMUM_SECONDS_RECHECK_TIME', 5))
+
+from changedetectionio.notification import (
+    default_notification_body,
+    default_notification_format,
+    default_notification_title,
+)
+
+
+class Watch(dict):
+    mtable = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400, 'weeks': 86400 * 7}
+
+    def __init__(self, *arg, **kw):
+        super(Watch, self).__init__(*arg, **kw)
+        self.update({
+            'url': None,
+            'tag': None,
+            'last_checked': 0,
+            'last_changed': 0,
+            'paused': False,
+            'last_viewed': 0,  # history key value of the last viewed via the [diff] link
+            'newest_history_key': "",
+            'title': None,
+            'previous_md5': "",
+            'uuid': str(uuid_builder.uuid4()),
+            'headers': {},  # Extra headers to send
+            'body': None,
+            'method': 'GET',
+            'history': {},  # Dict of timestamp and output stripped filename
+            'ignore_text': [],  # List of text to ignore when calculating the comparison checksum
+            # Custom notification content
+            'notification_urls': [],  # List of URLs to add to the notification Queue (Usually AppRise)
+            'notification_title': default_notification_title,
+            'notification_body': default_notification_body,
+            'notification_format': default_notification_format,
+            'css_filter': "",
+            'subtractive_selectors': [],
+            'trigger_text': [],  # List of text or regex to wait for until a change is detected
+            'fetch_backend': None,
+            'extract_title_as_title': False,
+            # Re #110, so then if this is set to None, we know to use the default value instead
+            # Requires setting to None on submit if it's the same as the default
+            'time_between_check': {'weeks': None, 'days': None, 'hours': None, 'minutes': None, 'seconds': minimum_seconds_recheck_time}
+        })
+
+    @property
+    def total_seconds(self):
+        seconds = 0
+        for m, n in self.mtable.items():
+            x = self.get('time_between_check', {}).get(m, None)
+            if x:
+                seconds += x * n
+        return max(seconds, minimum_seconds_recheck_time)
+
