@@ -13,7 +13,7 @@ def test_check_access_control(app, client):
         res = c.post(
             url_for("settings_page"),
             data={"password": "foobar",
-                  "seconds_between_check": 180,
+                  "time_between_check": {'seconds':180},
                   'fetch_backend': "html_requests"},
             follow_redirects=True
         )
@@ -52,7 +52,7 @@ def test_check_access_control(app, client):
         res = c.post(
             url_for("settings_page"),
             data={
-                "seconds_between_check": 180,
+                "time_between_check": {'seconds':180},
                 "tag": "",
                 "headers": "",
                 "fetch_backend": "html_webdriver",
@@ -74,7 +74,7 @@ def test_check_access_control_no_blank_password(app, client):
         res = c.post(
             url_for("settings_page"),
             data={"password": "",
-                  "seconds_between_check": 180,
+                  "time_between_check": {'seconds':180},
                   'fetch_backend': "html_requests"},
             follow_redirects=True
         )
@@ -96,7 +96,7 @@ def test_check_access_no_remote_access_to_remove_password(app, client):
         res = c.post(
             url_for("settings_page"),
             data={"password": "password",
-                  "seconds_between_check": 180,
+                  "time_between_check": {'seconds':180},
                   'fetch_backend': "html_requests"},
             follow_redirects=True
         )
@@ -107,7 +107,7 @@ def test_check_access_no_remote_access_to_remove_password(app, client):
         res = c.post(
             url_for("settings_page"),
             data={
-                "seconds_between_check": 180,
+                "time_between_check": {'seconds':180},
                 "tag": "",
                 "headers": "",
                 "fetch_backend": "html_webdriver",

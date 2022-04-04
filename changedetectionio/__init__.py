@@ -263,7 +263,7 @@ def changedetection_app(config=None, datastore_o=None):
 
         # Disable password login if there is not one set
         # (No password in settings or env var)
-        app.config['LOGIN_DISABLED'] = datastore.data['settings']['application']['password'] == False and os.getenv("SALTED_PASS", False) == False
+        app.config['LOGIN_DISABLED'] = not datastore.data['settings']['application']['password'] and not os.getenv("SALTED_PASS", False)
 
         # Set the auth cookie path if we're running as X-settings/X-Forwarded-Prefix
         if os.getenv('USE_X_SETTINGS') and 'X-Forwarded-Prefix' in request.headers:
@@ -499,8 +499,9 @@ def changedetection_app(config=None, datastore_o=None):
     def edit_page(uuid):
         from changedetectionio import forms
 
-        o= AttrDict(datastore.data['watching'][uuid])
-        form = forms.watchForm(request.form, obj=o)
+        form = forms.watchForm(formdata=request.form if request.method == 'POST' else None,
+                                        data=datastore.data['watching'][uuid]
+                                        )
 
         # More for testing, possible to return the first/only
         if uuid == 'first':
@@ -543,6 +544,7 @@ def changedetection_app(config=None, datastore_o=None):
                 if len(datastore.data['watching'][uuid]['history']):
                     extra_update_obj['previous_md5'] = get_current_checksum_include_ignore_text(uuid=uuid)
 
+            form.data.trigger_check = False
             datastore.data['watching'][uuid].update(form.data)
             datastore.data['watching'][uuid].update(extra_update_obj)
 
@@ -594,7 +596,7 @@ def changedetection_app(config=None, datastore_o=None):
                                      watch=datastore.data['watching'][uuid],
                                      form=form,
                                      using_default_minutes=using_default_minutes,
-                                     current_base_url = datastore.data['settings']['application']['base_url']
+                                     current_base_url=datastore.data['settings']['application']['base_url']
                                      )
 
         return output
@@ -602,72 +604,54 @@ def changedetection_app(config=None, datastore_o=None):
     @app.route("/settings", methods=['GET', "POST"])
     @login_required
     def settings_page():
-
         from changedetectionio import content_fetcher, forms
 
-        form = forms.globalSettingsForm(request.form)
+        # Don't use form.data on POST so that it doesnt overrid the checkbox status from the POST status
+        form = forms.globalSettingsForm(formdata=request.form if request.method == 'POST' else None,
+                                        data=datastore.data['settings']['application']
+                                        )
 
-        if request.method == 'GET':
-            form.seconds_between_check.data = int(datastore.data['settings']['requests']['seconds_between_check'])
-            form.notification_urls.data = datastore.data['settings']['application']['notification_urls']
-            form.global_subtractive_selectors.data = datastore.data['settings']['application']['global_subtractive_selectors']
-            form.global_ignore_text.data = datastore.data['settings']['application']['global_ignore_text']
-            form.ignore_whitespace.data = datastore.data['settings']['application']['ignore_whitespace']
-            form.extract_title_as_title.data = datastore.data['settings']['application']['extract_title_as_title']
-            form.fetch_backend.data = datastore.data['settings']['application']['fetch_backend']
-            form.notification_title.data = datastore.data['settings']['application']['notification_title']
-            form.notification_body.data = datastore.data['settings']['application']['notification_body']
-            form.notification_format.data = datastore.data['settings']['application']['notification_format']
-            form.base_url.data = datastore.data['settings']['application']['base_url']
-            form.real_browser_save_screenshot.data = datastore.data['settings']['application']['real_browser_save_screenshot']
-
-        if request.method == 'POST' and form.data.get('removepassword_button') == True:
+        if request.method == 'POST':
             # Password unset is a GET, but we can lock the session to a salted env password to always need the password
-            if not os.getenv("SALTED_PASS", False):
+            if form.data.get('removepassword_button', False) == True and not os.getenv("SALTED_PASS", False):
                 datastore.data['settings']['application']['password'] = False
                 flash("Password protection removed.", 'notice')
                 flask_login.logout_user()
                 return redirect(url_for('settings_page'))
 
-        if request.method == 'POST' and form.validate():
-            datastore.data['settings']['application']['notification_urls'] = form.notification_urls.data
-            datastore.data['settings']['requests']['seconds_between_check'] = int(form.seconds_between_check.data)
-            datastore.data['settings']['application']['extract_title_as_title'] = form.extract_title_as_title.data
-            datastore.data['settings']['application']['fetch_backend'] = form.fetch_backend.data
-            datastore.data['settings']['application']['notification_title'] = form.notification_title.data
-            datastore.data['settings']['application']['notification_body'] = form.notification_body.data
-            datastore.data['settings']['application']['notification_format'] = form.notification_format.data
-            datastore.data['settings']['application']['notification_urls'] = form.notification_urls.data
-            datastore.data['settings']['application']['base_url'] = form.base_url.data
-            datastore.data['settings']['application']['global_subtractive_selectors'] = form.global_subtractive_selectors.data
-            datastore.data['settings']['application']['global_ignore_text'] =  form.global_ignore_text.data
-            datastore.data['settings']['application']['ignore_whitespace'] = form.ignore_whitespace.data
-            datastore.data['settings']['application']['real_browser_save_screenshot'] = form.real_browser_save_screenshot.data
+            if form.validate():
+                if form.trigger_check.data:
+                    if len(form.notification_urls.data):
+                        n_object = {'watch_url': "Test from changedetection.io!",
+                                    'notification_urls': form.notification_urls.data,
+                                    'notification_title': form.notification_title.data,
+                                    'notification_body': form.notification_body.data,
+                                    'notification_format': form.notification_format.data,
+                                    }
+                        notification_q.put(n_object)
+                        flash('Test notification queued.')
+                    else:
+                        flash('No notification URLs set, cannot send test.', 'error')
 
-            if form.trigger_check.data:
-                if len(form.notification_urls.data):
-                    n_object = {'watch_url': "Test from changedetection.io!",
-                                'notification_urls': form.notification_urls.data,
-                                'notification_title': form.notification_title.data,
-                                'notification_body': form.notification_body.data,
-                                'notification_format': form.notification_format.data,
-                                }
-                    notification_q.put(n_object)
-                    flash('Test notification queued.')
-                else:
-                    flash('No notification URLs set, cannot send test.', 'error')
+                datastore.data['settings']['application'].update(form.data)
+                datastore.needs_write = True
 
-            if not os.getenv("SALTED_PASS", False) and form.password.encrypted_password:
-                datastore.data['settings']['application']['password'] = form.password.encrypted_password
-                flash("Password protection enabled.", 'notice')
-                flask_login.logout_user()
-                return redirect(url_for('index'))
+                if not os.getenv("SALTED_PASS", False) and len(form.password.encrypted_password):
+                    datastore.data['settings']['application']['password'] = form.password.encrypted_password
+                    datastore.needs_write = True
+                    flash("Password protection enabled.", 'notice')
+                    flask_login.logout_user()
+                    return redirect(url_for('index'))
 
-            datastore.needs_write = True
-            flash("Settings updated.")
+                flash("Settings updated.")
 
-        if request.method == 'POST' and not form.validate():
-            flash("An error occurred, please see below.", "error")
+            else:
+                flash("An error occurred, please see below.", "error")
+
+        else:
+            form = forms.globalSettingsForm(
+                                            data=datastore.data['settings']['application']
+                                            )
 
         output = render_template("settings.html",
                                  form=form,

@@ -1,3 +1,4 @@
+import collections
 import os
 
 import uuid as uuid_builder

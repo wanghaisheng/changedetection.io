@@ -325,7 +325,7 @@ class commonSettingsForm(Form):
     notification_title = StringField('Notification Title', default=default_notification_title, validators=[validators.Optional(), ValidateTokensList()])
     notification_body = TextAreaField('Notification Body', default=default_notification_body, validators=[validators.Optional(), ValidateTokensList()])
     notification_format = SelectField('Notification Format', choices=valid_notification_formats.keys(), default=default_notification_format)
-    trigger_check = BooleanField('Send test notification on save')
+    trigger_check = BooleanField('Send test notification on save', false_values=(False, 'false', '', True, 'true'))
     fetch_backend = RadioField(u'Fetch Method', choices=content_fetcher.available_fetchers(), validators=[ValidateContentFetcherIsReady()])
     extract_title_as_title = BooleanField('Extract <title> from document and use as watch title', default=False)
 
@@ -365,12 +365,13 @@ class watchForm(commonSettingsForm):
 
 class globalSettingsForm(commonSettingsForm):
     password = SaltyPasswordField()
-    time_between_check = FormField(TimeBetweenCheckForm)
-    extract_title_as_title = BooleanField('Extract <title> from document and use as watch title')
+
     base_url = StringField('Base URL', validators=[validators.Optional()])
     global_subtractive_selectors = StringListField('Remove elements', [ValidateCSSJSONXPATHInput(allow_xpath=False, allow_json=False)])
     global_ignore_text = StringListField('Ignore Text', [ValidateListRegex()])
     ignore_whitespace = BooleanField('Ignore whitespace')
-    save_button = SubmitField('Save', render_kw={"class": "pure-button pure-button-primary"})
     real_browser_save_screenshot = BooleanField('Save last screenshot when using Chrome?')
     removepassword_button = SubmitField('Remove password', render_kw={"class": "pure-button pure-button-primary"})
+    fetch_backend = RadioField('Fetch Method', choices=content_fetcher.available_fetchers(), validators=[ValidateContentFetcherIsReady()])
+    time_between_check = FormField(TimeBetweenCheckForm)
+    save_button = SubmitField('Save', render_kw={"class": "pure-button pure-button-primary"})

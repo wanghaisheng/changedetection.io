@@ -347,8 +347,7 @@ class ChangeDetectionStore:
             f.close()
 
     def sync_to_json(self):
-        logging.info("Saving JSON..")
-
+        print("Saving JSON..")
         try:
             data = deepcopy(self.__data)
         except RuntimeError as e:
@@ -382,6 +381,9 @@ class ChangeDetectionStore:
 
             if self.needs_write:
                 self.sync_to_json()
+
+            time.sleep(1)
+            continue
 
             # Once per minute is enough, more and it can cause high CPU usage
             # better here is to use something like self.app.config.exit.wait(1), but we cant get to 'app' from here
